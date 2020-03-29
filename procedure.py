@@ -6,29 +6,30 @@ def getStopWords(training_feature: TrainingFeature):
     # pre-read stopwords
     stop_words = set()
 
-    with open('./resource/stopwords.txt', 'r') as file:
-        lines = file.readlines()
-        for line in lines:
-            line = line.strip('\n')
-            stop_words.add(line)
-        if training_feature.FEATURE_ADD_STOP_WORDS:
-            default_in_mails = ['oct', 'color', 'sep', 'sans', 'serif', 'aspx', 'valign', 'nowrap', 'rowspan', 'title',
-                                'email', 'format', 'DEFANGED_SPAN', 'mon', 'sun', 'tue', 'apr', 'nil', 'fri', 'jan',
-                                'mar',
-                                'TABLE', 'thu', 'META', 'bgcolor', 'feb', 'EST', 'SPAN', 'RPCSS', 'arial', 'align',
-                                'center', 'gif', 'div', 'float', 'CERT', 'mail', 'mailer', 'mime', 'SMTP', 'plain',
-                                'reply',
-                                'html', 'STRONG', 'FLOAT', 'font', 'info', 'subject', 'sender', 'DMDX', 'ascii', '3D2',
-                                'href', 'body', 'ESMTP', 'media', 'strong', 'style', 'nbsp', 'left', 'img', 'height',
-                                'src',
-                                'cert', 'FONT', 'size', 'table', 'message', 'encoding', 'border', 'width', 'aug',
-                                'span',
-                                'transfer', 'net', 'subject', 'charset', 'received', 'content', 'version', 'text',
-                                'DIV',
-                                'class', 'color', 'HTML', 'http', 'type', 'MIME']
-            for word in default_in_mails:
-                stop_words.add(word)
-        file.close()
+    if training_feature.FEATURE_ADD_STOP_WORDS:
+        with open('./resource/stopwords.txt', 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                line = line.strip('\n')
+                stop_words.add(line)
+
+                default_in_mails = ['oct', 'color', 'sep', 'sans', 'serif', 'aspx', 'valign', 'nowrap', 'rowspan', 'title',
+                                    'email', 'format', 'DEFANGED_SPAN', 'mon', 'sun', 'tue', 'apr', 'nil', 'fri', 'jan',
+                                    'mar',
+                                    'TABLE', 'thu', 'META', 'bgcolor', 'feb', 'EST', 'SPAN', 'RPCSS', 'arial', 'align',
+                                    'center', 'gif', 'div', 'float', 'CERT', 'mail', 'mailer', 'mime', 'SMTP', 'plain',
+                                    'reply',
+                                    'html', 'STRONG', 'FLOAT', 'font', 'info', 'subject', 'sender', 'DMDX', 'ascii', '3D2',
+                                    'href', 'body', 'ESMTP', 'media', 'strong', 'style', 'nbsp', 'left', 'img', 'height',
+                                    'src',
+                                    'cert', 'FONT', 'size', 'table', 'message', 'encoding', 'border', 'width', 'aug',
+                                    'span',
+                                    'transfer', 'net', 'subject', 'charset', 'received', 'content', 'version', 'text',
+                                    'DIV',
+                                    'class', 'color', 'HTML', 'http', 'type', 'MIME']
+                for word in default_in_mails:
+                    stop_words.add(word)
+            file.close()
     return stop_words
 
 
@@ -95,8 +96,9 @@ def getVocabularyDict(vocabulary: dict, training_feature: TrainingFeature):
     if training_feature.FEATURE_DROP_FREQUENT_WORDS:
         print("Select vocabdict with drop_frequent")
         array = sorted([(k, v) for (k, v) in vocabulary.items()], key= lambda x: x[1])
+        print("Total length: ", len(array))
         length = len(array)
-        array = array[int(length * 0.85): int(length * 1.0)][0:training_feature.VOCAB_SIZE]
+        array = array[int(length * 0.75): int(length * 1.0)][0:training_feature.VOCAB_SIZE]
         for (k , _) in array:
             vocab.setdefault(k, index)
             index += 1
@@ -104,7 +106,8 @@ def getVocabularyDict(vocabulary: dict, training_feature: TrainingFeature):
         print("Select vocabdict with non_drop_frequent")
         array = sorted([(k, v) for (k, v) in vocabulary.items()], key=lambda x: x[1])
         length = len(array)
-        array = array[int(length * 0.85): int(length * 1.0)][-training_feature.VOCAB_SIZE:]
+        print("Total length: ", length)
+        array = array[-training_feature.VOCAB_SIZE:]
         for (k, _) in array:
             vocab.setdefault(k, index)
             index += 1
@@ -144,8 +147,25 @@ def training(vocab: dict, train_dir: list, train_y: list, train_dir_is_ascii: li
     LAPLACE = 1
     import math
     for i in range(0, const.VOCAB_LENGTH + 1):
-        hham_sum[i] = math.log((hham_sum[i] + LAPLACE) / hham_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL])
-        spam_sum[i] = math.log((spam_sum[i] + LAPLACE) / spam_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL])
+        if not training_feature.MODERATE_LAPLACE:
+            if training_feature.INCREASE_PRECISION:
+                hham_sum[i] = math.log(2 * (hham_sum[i] + LAPLACE) / (hham_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] + const.VOCAB_LENGTH))
+            else:
+                hham_sum[i] = math.log((hham_sum[i] + LAPLACE) / (hham_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] + const.VOCAB_LENGTH))
+            spam_sum[i] = math.log((spam_sum[i] + LAPLACE) / (spam_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] + const.VOCAB_LENGTH))
+        else:
+            hham_tmp = (hham_sum[i] + LAPLACE) / (hham_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] + const.VOCAB_LENGTH)
+            spam_tmp = (spam_sum[i] + LAPLACE) / (spam_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] + const.VOCAB_LENGTH)
+            if hham_tmp < spam_tmp * 1/9:
+                hham_sum[i] = math.log(spam_tmp/4)
+                spam_sum[i] = math.log(spam_tmp)
+            elif spam_tmp < hham_tmp * 1/9:
+                hham_sum[i] = math.log(hham_tmp)
+                spam_sum[i] = math.log(hham_tmp/4)
+            else:
+                hham_sum[i] = math.log(hham_tmp)
+                spam_sum[i] = math.log(spam_tmp)
+
 
     hham_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] /= hham_sum[const.VOCAB_LENGTH + const.OFFSET_MAILS_TOTAL]
     spam_sum[const.VOCAB_LENGTH + const.OFFSET_WORDS_TOTAL] /= spam_sum[const.VOCAB_LENGTH + const.OFFSET_MAILS_TOTAL]

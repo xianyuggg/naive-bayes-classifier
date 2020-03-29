@@ -1,16 +1,7 @@
 from config import TrainingFeature, FeatureConst
 
 def textParse(bigString, training_feature: TrainingFeature):
-    '''
-    Desc:
-        接收一个大字符串并将其解析为字符串列表
-    Args:
-        bigString -- 大字符串
-    Returns:
-        去掉少于 2 个字符的字符串，并将所有字符串转换为小写，返回字符串列表
-    '''
     import re
-    # 使用正则表达式来切分句子，其中分隔符是除单词、数字外的任意字符串
     try:
         listOfTokens = re.split(r'\W*', bigString)
         res = []
@@ -23,14 +14,11 @@ def textParse(bigString, training_feature: TrainingFeature):
                     continue
                 if tok.isupper():
                     res.append('___PURE_UPPER') # regard it as a feature too
-                    res.append(tok) # add all the upper case into vocab
-                    continue
                 if tok.isdigit():
                     res.append('___PURE_NUMBER')
                     continue
                 if len(re.findall(r'.*\d+.*', tok)) > 0:
                     res.append('___CONTAIN_NUMBER')
-                    continue
             res.append(tok.lower())
         return res
     except:
